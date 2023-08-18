@@ -95,46 +95,6 @@ public class Loader
         return obj;
     }
 
-
-    //public static GameObject ImportModels(int memoryPointer, int size, float gridOffset = 256f, bool pointHeaderCheck = true)
-    //{
-    //    bool debug = true;
-
-    //    List<int> xpData = Importer.Instance.SearchForXPDataNights(memoryPointer, 0, size, debug);
-
-    //    ModelData modelData = Importer.Instance.ImportModelsFromMemory(xpData, 0, gridOffset, 1024, 1024, debug, pointHeaderCheck, _textureFolder);
-
-    //    GameObject obj = Importer.Instance.CreateObject(modelData, _textureFolder, false, false);
-    //    return obj;
-    //}
-
-    //public static void LoadGroundTextures(int grdNamePointer, int gtxNamePointer)
-    //{
-    //    string grdName = GetFileNameFromMemory(grdNamePointer);
-    //    string gtxName = GetFileNameFromMemory(gtxNamePointer);
-
-    //    Importer.Instance.LoadGroundTextures(gtxName, grdName);
-    //}
-
-    public static int LoadFile(int fileNamePointer, int destination)
-    {
-        string fileName = GetFileNameFromMemory(fileNamePointer);
-
-        Debug.Log(fileName + " -> " + destination.ToString("X8"));
-
-        MemoryManager memory = Importer.Instance.GetMemoryManager(destination);
-
-        if (memory != null)
-        {
-            return memory.LoadFile(VersionChecker.GetFilePath(fileName), destination);
-        }
-        else
-        {
-            Debug.Log("No memory for " + fileName);
-            return -1;
-        }
-    }
-
     public static int ImportTextureList(byte[] data, int textureIndex)
     {
         //byte[] mdxData = File.ReadAllBytes(file);
@@ -199,64 +159,5 @@ public class Loader
         }
 
         return textureIndex;
-    }
-
-    public static void LoadTextures(int tableListPointer, int destination)
-    {
-        bool debug = true;
-
-        MemoryManager memory = Importer.Instance.GetMemoryManager(tableListPointer);
-
-        int textureId = GetTextureIdFromVdpTable(_vdpTable, destination);
-
-        bool tableEnd = false;
-        while (tableEnd == false)
-        {
-            int tablePointer = memory.GetInt32(tableListPointer);
-
-            if (tablePointer == -1)
-            {
-                tableEnd = true;
-                continue;
-            }
-
-            Debug.Log("textureTable at " + tablePointer.ToString("X8"));
-
-            bool increaseIndexOnZero = true;
-
-            bool addTextures = true;
-            textureId = Importer.Instance.LoadTexturesFromMemory(_textureFolder, tablePointer, -1, textureId, addTextures, debug, increaseIndexOnZero);
-
-            tableListPointer += 4;
-        }
-    }
-
-    public static string GetFileNameFromMemory(int fileNamePointer)
-    {
-        string fileName = "";
-
-        MemoryManager memory = Importer.Instance.GetMemoryManager(fileNamePointer);
-
-        bool nameEnd = false;
-        while (nameEnd == false)
-        {
-            byte character = memory.GetByte(fileNamePointer);
-
-            if (character == 0)
-            {
-                nameEnd = true;
-                continue;
-            }
-
-            fileName += (char)memory.GetByte(fileNamePointer);
-            fileNamePointer++;
-        }
-
-        return fileName;
-    }
-
-    public static int GetTextureIdFromVdpTable(int vdpTableStart, int vdpTablePointer)
-    {
-        return ((vdpTablePointer - vdpTableStart) / 8);
     }
 }

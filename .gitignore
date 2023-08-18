@@ -1,0 +1,9 @@
+Library/
+Logs/
+.vsconfig
+obj/
+Temp/
+textures/
+UserSettings/
+Assembly-CSharp.csproj
+SthaImporter.sln
