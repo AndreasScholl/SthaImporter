@@ -6,13 +6,10 @@ using UnityEngine;
 
 public class Loader
 {
-    const int _vdpTable = 0x060ED000;
-    private static string _textureFolder = "";
-
-    public static GameObject ImportMap(string mapFile)
+    public static GameObject ImportModel(string mapFile)
     {
         byte[] mdxData = File.ReadAllBytes(mapFile);
-        int polyData = ByteArray.GetInt32(mdxData, 0x20);
+        int polyData = ByteArray.GetInt32(mdxData, 0x20);   // chunk 5
         int polySize = mdxData.Length - polyData;
 
         Debug.Log("data: " + polyData.ToString("X8"));
@@ -22,13 +19,11 @@ public class Loader
         int memoryOffset = 0x00200000;
 
         MemoryManager memory = Importer.Instance.GetMemoryManager(fileMemoryOffset);
-        //int size = memory.LoadFile(file, fileMemoryOffset);
         int mapDataLocation = 0x234000;
         memory.LoadArray(mdxData, polyData, polySize, mapDataLocation);
 
         int objMemory = mapDataLocation + 0x08;
         int objCount = memory.GetInt16(objMemory);
-        //objCount = 500;
 
         objMemory += 4;
         List<int> xpData = new List<int>();
@@ -45,9 +40,6 @@ public class Loader
             modelPointer0 &= 0x00ffffff;
             xpData.Add(modelPointer0);
 
-            //float x = memory.GetFloat16(objMemory + 0x20);
-            //float y = memory.GetFloat16(objMemory + 0x22);
-            //float z = memory.GetFloat16(objMemory + 0x24);
             short x = (short)memory.GetInt16(objMemory + 0x20);
             short y = (short)memory.GetInt16(objMemory + 0x22);
             short z = (short)memory.GetInt16(objMemory + 0x24);
@@ -78,12 +70,12 @@ public class Loader
             objMemory += 0x38;
         }
 
-        //List<int> xpData = SearchForXPDataNights(memoryOffset, 0x00000, 0xfff00, true);
-
         bool pointHeaderCheck = false;
         float gridOffset = 256;
 
-        ModelData modelData = Importer.Instance.ImportModelsFromMemory(xpData, pointHeaderCheck, memoryOffset, 0, gridOffset, 512, 512, true);
+        string modelName = Path.GetFileNameWithoutExtension(mapFile);
+        bool debug = false;
+        ModelData modelData = Importer.Instance.ImportModelsFromMemory(xpData, pointHeaderCheck, memoryOffset, 0, gridOffset, 1024, 1024, false, modelName);
 
         GameObject obj = Importer.Instance.CreateObject(modelData, "map", false, false, null, positions, angles, scales);
         obj.transform.position = new Vector3(0f, 0f, 0f);
@@ -91,18 +83,17 @@ public class Loader
         obj.transform.localScale = new Vector3(-0.1f, 0.1f, 0.1f);
 
         //PostprocessModel(obj, true, false, 90f);
+        obj.name = modelName;
 
         return obj;
     }
 
-    public static int ImportTextureList(byte[] data, int textureIndex)
+    public static int ImportTextureList(byte[] data, int textureIndex, string textureFolder)
     {
-        //byte[] mdxData = File.ReadAllBytes(file);
         int fileMemoryOffset = 0x06000000;
         int textureTable = 0x0607c000;
         MemoryManager memory = Importer.Instance.GetMemoryManager(fileMemoryOffset);
         memory.LoadArray(data, 0, data.Length, textureTable);
-        //memory.LoadFile(file, fileMemoryOffset);
 
         int numTextures = memory.GetInt32(textureTable);
         Debug.Log("textures: " + numTextures.ToString("X8"));
@@ -155,7 +146,7 @@ public class Loader
 
             byte[] bytes = Importer.Instance.FlipYAndRemoveAlpha(texture).EncodeToPNG();
             //byte[] bytes = texture.EncodeToPNG();
-            File.WriteAllBytes("textures/tex_" + textureIndex + ".png", bytes);
+            File.WriteAllBytes(textureFolder + "/tex_" + textureIndex + ".png", bytes);
         }
 
         return textureIndex;

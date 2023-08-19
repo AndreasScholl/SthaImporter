@@ -1,4 +1,6 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
+using UnityEngine;
 
 public class Decompression
 {
@@ -56,54 +58,61 @@ public class Decompression
 
     public static byte[] DecompressData(MemoryManager memory, int startOffset)
     {
-        List<byte> decompressedData = new List<byte>();
-
-        int readPos = startOffset;
-        int currentPos = 0;
-
-        while (true)
+        try
         {
-            int bitfield = memory.GetInt16(readPos);
-            readPos += 2;
+            List<byte> decompressedData = new List<byte>();
 
-            for (int i = 0; i < 16; i++)
+            int readPos = startOffset;
+            int currentPos = 0;
+
+            while (true)
             {
-                bool commandFlag = (bitfield & 0x8000) != 0;
+                int bitfield = memory.GetInt16(readPos);
+                readPos += 2;
 
-                if (commandFlag)
+                for (int i = 0; i < 16; i++)
                 {
-                    int value = memory.GetInt16(readPos);
-                    readPos += 2;
+                    bool commandFlag = (bitfield & 0x8000) != 0;
 
-                    if (value == 0)
+                    if (commandFlag)
                     {
-                        // end of Stream command
-                        return decompressedData.ToArray();
+                        int value = memory.GetInt16(readPos);
+                        readPos += 2;
+
+                        if (value == 0)
+                        {
+                            // end of Stream command
+                            return decompressedData.ToArray();
+                        }
+
+                        int negativeOffset = (value >> 5) * 2;
+                        int count = ((value & 0x1f) + 2) * 2;
+
+                        // stream copy
+                        for (int o = 0; o < count; o++)
+                        {
+                            decompressedData.Add(decompressedData[currentPos - negativeOffset]);
+                            currentPos++;
+                        }
                     }
-
-                    int negativeOffset = (value >> 5) * 2;
-                    int count = ((value & 0x1f) + 2) * 2;
-
-                    // stream copy
-                    for (int o = 0; o < count; o++)
+                    else
                     {
-                        decompressedData.Add(decompressedData[currentPos - negativeOffset]);
-                        currentPos++;
-                    }
-                }
-                else
-                {
-                    // no command, copy word to output buffer
-                    decompressedData.Add(memory.GetByte(readPos));
-                    readPos++;
-                    decompressedData.Add(memory.GetByte(readPos));
-                    readPos++;
+                        // no command, copy word to output buffer
+                        decompressedData.Add(memory.GetByte(readPos));
+                        readPos++;
+                        decompressedData.Add(memory.GetByte(readPos));
+                        readPos++;
 
-                    currentPos += 2;
+                        currentPos += 2;
+                    }
+                    bitfield = bitfield << 1;
                 }
-                bitfield = bitfield << 1;
             }
         }
+        catch (Exception e)
+        {
+            Debug.LogError("ERROR decompressing memory at: " + startOffset.ToString("X8"));
+            return null;
+        }
     }
-
 }

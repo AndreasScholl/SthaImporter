@@ -4,6 +4,7 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using UnityEngine;
+using Util;
 
 public class Importer : MonoBehaviour
 {
@@ -38,29 +39,68 @@ public class Importer : MonoBehaviour
 
     void Start()
     {
+        if (VersionChecker.CheckImagePath() == false)
+        {
+            return; // no valid image
+        }
+
+        //string mapfile = "F:/M621.mdx";       // mine map
+        //string mapFile = "F:/M101.MDX";       // tent town
+        //string mapFile = "F:/M121.MDX";       // castle
+        //string mapFile = "F:/M161.MDX";       // town
+        //string mapFile = "F:/M201.MDX";       // church
+        //string mapFile = "F:/M501.mdx";       // forest
+        //string mapFile = "F:/M513.mdx";       // mine entrance
+        //string mapFile = "F:/M553.mdx";       // clock room
+
+        StartCoroutine(ImportAllMaps());
+    }
+
+    IEnumerator ImportAllMaps()
+    {
         _dataHW = new MemoryManager(HWRAM);
         _dataLW = new MemoryManager(LWRAM);
 
-        //VersionChecker.CheckImagePath();
-        Directory.CreateDirectory("textures/");
+        // get all map files
+        string[] mapFiles = FileSystemHelper.GetFiles(VersionChecker.ImagePath, "*.mdx", SearchOption.AllDirectories);
 
-        // load main binary
-        //_dataHW.LoadFile(VersionChecker.GetFilePath("0NIGHTS"), 0x06004000, false);
+        const float gridSize = 600f;
+        const int gridRow = 10;
+        int index = 0;
+        foreach (string mapFile in mapFiles)
+        {
+            Debug.Log("MAP: " + mapFile);
 
-        // texture compression test
-        //string mapfile = "F:/M621.mdx";       // mine map
-        //string mapFile = "F:/M101.MDX";       // tent town
-        //string file = "F:/M102.MDX";          // part of a house?
-        //string file = "F:/M103.MDX";          // another house or church
-        //string mapFile = "F:/M121.MDX";         // castle
-        //string mapFile = "F:/M161.MDX";        // town
-        //string mapFile = "F:/M131.MDX";    // same as 161?
-        //string mapFile = "F:/M201.MDX";    // church?
-        //string mapFile = "F:/M501.mdx";       // forest
-        //string mapFile = "F:/M513.mdx";     // mine entrance
-        string mapFile = "F:/M552.mdx";
-        //string mapFile = "F:/M553.mdx";     // clock room
-        //string mapFile = "F:/M911.MDX";
+            if (Path.GetFileNameWithoutExtension(mapFile).EndsWith("E") ||
+                Path.GetFileNameWithoutExtension(mapFile).EndsWith("A") ||
+                Path.GetFileNameWithoutExtension(mapFile).EndsWith("B"))
+            {
+                continue;   // skip .mdx files ending with E
+            }
+
+            GameObject map = ImportMap(mapFile);
+
+            map.transform.position = new Vector3((index % gridRow) * gridSize, 0f, (index / gridRow) * gridSize);
+
+            index++;
+
+            //if (index > 3)
+            //{
+            //    break;
+            //}
+
+            yield return null;
+        }
+    }
+    
+    private GameObject ImportMap(string mapFile)
+    {
+        // get textures from chunk2 of mdx file
+        //
+        Textures.Clear();
+        
+        string textureFolder = "textures/" + Path.GetFileNameWithoutExtension(mapFile);
+        Directory.CreateDirectory(textureFolder);
 
         byte[] mdxData = File.ReadAllBytes(mapFile);
 
@@ -79,41 +119,45 @@ public class Importer : MonoBehaviour
         int chunk2HeaderMemory = memory.GetInt32(chunk2DataLocation);
         Debug.Log("chunk2Header: " + chunk2HeaderMemory.ToString("X8"));
 
-        //////////
-
         int textureIndex = 0;
+
         int dataPointer = memory.GetInt32(chunk2HeaderMemory + 0x84);
         byte[] decompressedTextures = Decompression.DecompressData(memory, dataPointer);
-        Debug.Log(decompressedTextures.Length);
-        //File.WriteAllBytes("textures/tex1.bin", decompressedTextures);
-        textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex);
+        if (decompressedTextures != null)
+        {
+            //File.WriteAllBytes("textures/tex1.bin", decompressedTextures);
+            textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex, textureFolder);
+        }
 
         dataPointer = memory.GetInt32(chunk2HeaderMemory + 0x88);
         decompressedTextures = Decompression.DecompressData(memory, dataPointer);
-        Debug.Log(decompressedTextures.Length);
-        //File.WriteAllBytes("textures/tex1.bin", decompressedTextures);
-        textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex);
+        //File.WriteAllBytes("textures/tex2.bin", decompressedTextures);
+        if (decompressedTextures != null)
+        {
+            textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex, textureFolder);
+        }
 
         dataPointer = memory.GetInt32(chunk2HeaderMemory + 0x8c);
         decompressedTextures = Decompression.DecompressData(memory, dataPointer);
-        Debug.Log(decompressedTextures.Length);
-        File.WriteAllBytes("textures/tex3.bin", decompressedTextures);
-        textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex);
+        //File.WriteAllBytes("textures/tex3.bin", decompressedTextures);
+        if (decompressedTextures != null)
+        {
+            textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex, textureFolder);
+        }
 
-        dataPointer = memory.GetInt32(chunk2HeaderMemory + 0x90);
-        decompressedTextures = Decompression.DecompressData(memory, dataPointer);
-        Debug.Log(decompressedTextures.Length);
-        File.WriteAllBytes("textures/tex4.bin", decompressedTextures);
-        textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex);
+        //dataPointer = memory.GetInt32(chunk2HeaderMemory + 0x90);
+        //decompressedTextures = Decompression.DecompressData(memory, dataPointer);
+        ////File.WriteAllBytes("textures/tex4.bin", decompressedTextures);
+        //if (decompressedTextures != null)
+        //{
+        //    textureIndex = Loader.ImportTextureList(decompressedTextures, textureIndex, textureFolder);
+        //}
 
-        // stha texture import (test)
-        //Loader.ImportTextures(Application.streamingAssetsPath + "/stha_hwram_textures.bin");
-        //Loader.ImportTextures(Application.streamingAssetsPath + "/stha_hwram_textures2.bin");
+        // import 3d models from chunk 5 of mdx file
+        //
+        GameObject map = Loader.ImportModel(mapFile);
 
-        // stha map import
-        List<GameObject> models = new List<GameObject>();
-        models.Add(Loader.ImportMap(mapFile));
-
+        return map;
     }
 
     public MemoryManager GetMemoryManager(int address)
@@ -130,7 +174,7 @@ public class Importer : MonoBehaviour
         return null;
     }
 
-    public ModelData ImportModelsFromMemory(List<int> xpData, bool pointHeaderCheck = false, int romOffset = HWRAM, int offsetTranslations = 0, float gridOffset = 24f, int width = 256, int height = 256, bool debugOutput = false)
+    public ModelData ImportModelsFromMemory(List<int> xpData, bool pointHeaderCheck = false, int romOffset = HWRAM, int offsetTranslations = 0, float gridOffset = 24f, int width = 256, int height = 256, bool debugOutput = false, string modelName = "map")
     {
         ModelData model = new ModelData();
         model.Init();
@@ -546,7 +590,7 @@ public class Importer : MonoBehaviour
         model.ModelTexture.ApplyTexture();
 
         byte[] bytes = model.ModelTexture.Texture.EncodeToPNG();
-        File.WriteAllBytes("textures/texture.png", bytes);
+        File.WriteAllBytes("textures/" + modelName + ".png", bytes);
 
         return model;
     }
