@@ -1,0 +1,104 @@
+
+start:
+
+234000 -> pointer to?
+234004 -> pointer to?
+234008 (num objs.)
+23400c (starting from here)
+238b84 (up to)
+structures of 0x38 bytes length with pointers
+
+lowest pointer going to 00240030 -> looks like polystructure
+
+240214 (polydata)
+-
+240530 -> polygon structure
+
+
+---------
+position research:
+
+
+corner of start3 -> XPDATA 224 : 00244B68
+
+234e64 -> wall corner element pos
+
+
+----------
+dungeon 1 (tile debugging)
+
+tile 1595 -> entrance right side corner part
+15CE8 (offset)
++3400c = 49CF4 
+pos: 249d14
+-> polys: 256240
+
+-------------------
+hunt for map data:
+found in: F:/M621.MDX at: 099008
+
+MDX + 0x20 -> pointer to map data
+
+--------------------
+textures:
+
+5c106C0
+5c279C0 -> ENTER SIGN left side
+
+80228022802280228022802280228022802280228022802280228022802280228022802280228022802280228022
+
+846388A68CE890E9
+
+copied from:
+0607C550
+
+func: 0600ED28 -> copy texture to vdp1
+called from 60165ea 
+
+PC =   0601605a
+mov.w	r1,@r5 ; write 8022 to 0607C550
+
+R04 =  0023749E
+
+------------------------
+
+PC 603e6f8 -> jsr @r9 (r9 = 6015fe8)
+Input: 
+	r8 (.l) = 607c000 -> r5
+	r0 (.w) = 0084
+	r4 (.l) = 22d48c
+			Word: 0x0200 (>> 6 + 0x8000) -> R03 =  02008000
+			Word: 0x0000
+			
+
+------------------------
+
+mdx chunks (example m621.mdx desire mine):
+
+1: 00000800 0000AA44 
+2: 0000B800 0000CBBC -> texture data? goes to 22c000
+3: 00018800 000021C4 
+4: 0001B000 0007DEF0 
+5: 00099000 00034BF2 -> 3d data goes to 234000
+
+
+
+at the beginning of the mdx file there are 5 memory chunks defined, the 5th chunk contains the 3d models and layout.
+I'm currently assuming the 2nd chunk contains the texture data.
+
+mdx chunks (example m621.mdx desire mine):
+```
+   offset   size
+1: 00000800 0000AA44 
+2: 0000B800 0000CBBC -> texture data? goes to 22c000
+3: 00018800 000021C4 
+4: 0001B000 0007DEF0 
+5: 00099000 00034BF2 -> 3d data goes to 234000
+```
+2: 
+offset 88: 0022D48C (chunk offset 148c + b800 = CC8C
+
+6070000 number of textures (0x37)
+607c008 - 607c1c0
+texture info 
+(width.w, height.w, offset.l)
